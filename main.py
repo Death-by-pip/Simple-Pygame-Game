@@ -235,6 +235,7 @@ while playing:
             else:
                 pygame.draw.rect(screen, blocks["/"], pygame.rect.Rect((x-.5-offsetx)*block_size, (y-.5-offsety)*block_size, block_size, block_size))
     
+    screen.blit(player.image, (0,0))
     pygame.display.flip()
 
     clock.tick(tick)
