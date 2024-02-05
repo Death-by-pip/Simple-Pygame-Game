@@ -3,11 +3,28 @@ from pygamevideo import Video
 
 display_size = 6
 block_size = 50
+tick = 1
 
 pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((display_size*block_size, display_size*block_size))
-pygame.display.toggle_fullscreen()
+# pygame.display.toggle_fullscreen()
+
+blocks = {
+    "#": (0,0,0,255),
+    "|": (70,30,5,255),
+    "/": (70,30,5,255),
+    ":": (35,15,2,255),
+    "@": (35,15,2,255),
+    " ": (150,200,255,255),
+    "$": (150,200,255,255),
+    ">": (150,200,255,255),
+    "<": (150,200,255,255),
+    "V": (150,200,255,255),
+    "^": (150,200,255,255),
+    "&": (150,70,10,255),
+    "~": (80,80,80,255),
+}
 
 # class Solid(pygame.sprite.Sprite):
 #     def __init__(self, x, y, ):
@@ -28,27 +45,93 @@ class Player(pygame.sprite.Sprite):
         self.x = 0
         self.y = 0
 
-    def move(self, map, tick, xspeed=2*block_size, jumpspeed=150, acceleration=-90):
+    def move(self, map_, xspeed=2, jumpspeed=3, acceleration=-1.8, maxspeed=5):
         keys = pygame.key.get_pressed()
+        multiplier = block_size/tick
         self.deltax = 0
+        jump = False
         if keys[pygame.K_RIGHT]:
-            self.deltax += xspeed
+            self.deltax += xspeed*multiplier
         if keys[pygame.K_LEFT]:
-            self.deltax -= xspeed
+            self.deltax -= xspeed*multiplier
         if keys[pygame.K_UP]:
             jump = True
-        collision = {}
-        y = [(self.y-self.size)//block_size, (self.y+self.size)//block_size]
-        x = [(self.x-self.size)//block_size, (self.x+self.size)//block_size]
-        if x[1]==x[0]:
+        self.y-=1
+        if "#" in self.get_collided(map_):
+            if jump:
+                self.deltay = jumpspeed*multiplier
+            else:
+                self.deltay = 0
+        else:
+            self.deltay += acceleration*multiplier
+        self.y+=1
+        if self.deltay>maxspeed*block_size:
+            self.deltay = maxspeed*block_size
+        elif self.deltay < -maxspeed*block_size:
+            self.deltay = -maxspeed*block_size
+        deltax = self.deltax
+        deltay = self.deltay
+        while (deltax!=0 or deltay!=0):
+            if deltax<0:
+                self.x -= 1
+            elif deltax>0:
+                self.x += 1
+            if "#" in self.get_collided(map_):
+                if deltax<0:
+                    self.x += 1
+                elif deltax>0:
+                    self.x -= 1
+                deltax = 0
+            if deltax<0:
+                deltax += 1
+            elif deltax>0:
+                deltax -= 1
+
+            if deltay<0:
+                self.y -= 1
+            elif deltay>0:
+                self.y += 1
+            if "#" in self.get_collided(map_):
+                if deltay<0:
+                    self.y += 1
+                elif deltay>0:
+                    self.y -= 1
+                deltay = 0
+            if deltay<0:
+                deltay += 1
+            elif deltay>0:
+                deltay -= 1
+
+    def get_collided(self, map_):
+        collided = []
+        y = [(self.y-self.size-1)//block_size, self.y//block_size, (self.y+self.size)//block_size]
+        x = [(self.x-self.size-1)//block_size, self.x//block_size, (self.x+self.size)//block_size]
+        if x[2]==x[1]:
+            x.pop(2)
+            # collide = "left"
+        if x[0]==x[1]:
             x.pop(0)
-        if y[1]==y[0]:
+        #     collide = "right"
+        # if len(x)==1:
+        #     collide = ""
+        if y[2]==y[1]:
+            y.pop(2)
+            # collide2 = "up"
+        if y[0]==y[1]:
             y.pop(0)
-        if y[-1]>len(map):
+        #     collide2 = "down"
+        # if len(y)==1:
+        #     collide2 = ""
+        if y[-1]>len(map_):
             print("Player has died.")
-            return
-        if "#" in map[y[-1]][x]:
-            self.deltay = 
+            return ["X"]
+        for x_ in x:
+            for y_ in y:
+                try:
+                    collided.append(map_[y_][x_])
+                except:
+                    collided.append("#")
+        return collided
 
     def update(self):
         screen.blit(self.image, self.rect.topleft)
@@ -86,9 +169,73 @@ def load_level(stage, sleep=False):
             break
     return lvl
 
-stages = ["start"]
+stages = ["intro"]
 player = Player()
 
 # while True:
-load_level("intro")
+loaded_stage = load_level(stages[0])
+playing = True
+while playing:
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_ESCAPE]:
+        pygame.quit()
+
+    player.move(loaded_stage)
+
+    offsetx = (player.x%block_size)-block_size/2
+    offsety = (player.y%block_size)-block_size/2
+    x_ = player.x//block_size
+    y_ = player.y//block_size
+    grid = []
+    for y1 in range(display_size+1):
+        y = y_+y1-display_size//2
+        row = []
+        for x1 in range(display_size+1):
+            x = x_+x1-display_size//2
+            try:
+                i = loaded_stage[y][x]
+            except:
+                i = "#"
+            if i in ["/","\\"]:
+                n = [loaded_stage[y][x+1],loaded_stage[y+1][x],loaded_stage[y][x-1],loaded_stage[y-1][x]]
+                n_map = {
+                    "|": 3,
+                    "/": 2,
+                    "\\": 2,
+                    "#": 1
+                }
+                if i=="/":
+                    if (n_map[n[0]]+n_map[n[1]]) >= (n_map[n[2]]+n_map[n[3]]):
+                        i = "/}"
+                    else:
+                        i = "{/"
+                elif i=="\\":
+                    if (n_map[n[2]]+n_map[n[1]]) >= (n_map[n[0]]+n_map[n[3]]):
+                        i = "{\\"
+                    else:
+                        i = "\\}"
+            # if i==".\\":
+            #     pygame.draw
+            row.append(i)
+        grid.append(row)
+
+    print("coloring screen")
+    screen.fill(blocks[" "])
+    for y in range(display_size+1):
+        for x in range(display_size+1):
+            i = grid[y][x]
+            if i=="./":
+                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y-.5)]])
+            elif i=="/.":
+                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x+.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
+            elif i==".\\":
+                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
+            elif i=="\\.":
+                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x+.5,y-.5), (x+.5,y+.5)]])
+            else:
+                pygame.draw.rect(screen, blocks["/"], pygame.rect.Rect((x-.5-offsetx)*block_size, (y-.5-offsety)*block_size, block_size, block_size))
+    
+    pygame.display.flip()
+
+    clock.tick(tick)
 pygame.quit()
