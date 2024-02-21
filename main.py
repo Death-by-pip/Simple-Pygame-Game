@@ -7,8 +7,9 @@ tick = 1
 
 pygame.init()
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((display_size*block_size, display_size*block_size))
-# pygame.display.toggle_fullscreen()
+window = pygame.display.set_mode((display_size*block_size, display_size*block_size))
+screen = pygame.Surface((display_size*block_size, display_size*block_size), pygame.SRCALPHA)
+pygame.display.toggle_fullscreen()
 
 blocks = {
     "#": (0,0,0,255),
@@ -44,6 +45,11 @@ class Player(pygame.sprite.Sprite):
         self.deltay = 0
         self.x = 0
         self.y = 0
+
+    # def redefine_player(self,x,y):
+    #     self.image = pygame.Surface((self.size*2, self.size*2), pygame.SRCALPHA)
+    #     pygame.draw.rect(self.image, (160, 210, 80, 250), pygame.rect.Rect(0,0,self.size*2,self.size*2))
+    #     self.rect = self.image.get_rect(center = (0,0))
 
     def move(self, map_, xspeed=2, jumpspeed=3, acceleration=-1.8, maxspeed=5):
         keys = pygame.key.get_pressed()
@@ -101,6 +107,7 @@ class Player(pygame.sprite.Sprite):
                 deltay += 1
             elif deltay>0:
                 deltay -= 1
+        screen.blit(window,(self.x,self.y))
 
     def get_collided(self, map_):
         collided = []
@@ -155,7 +162,7 @@ def playcutscene(title: str, extension="mp4"):
 
 def load_level(stage, sleep=False):
     with open("levels/"+stage+".txt", "r") as f:
-        lvl = ("".join(f.readlines()).replace("\\\\","\\").split("\n"))
+        lvl = ("".join(f.readlines()).split("\n"))
     lvl1 = lvl[:lvl.index("zzz")]
     lvl2 = lvl[lvl.index("zzz")+1:]
     if sleep:
@@ -167,6 +174,32 @@ def load_level(stage, sleep=False):
             player.y = n*block_size
             player.x = row.find("$")*block_size
             break
+
+    screen = pygame.Surface((len(lvl[0])*block_size, len(lvl)*block_size))
+    for y, row in enumerate(lvl):
+        for x, tile in enumerate(row):
+            if tile in ["/","\\"]:
+                n = [row[x+1], lvl[y+1][x], row[x-1], lvl[y-1][x]]
+                n_map = {
+                    "|": 3,
+                    "/": 2,
+                    "\\": 2,
+                    "#": 1
+                }
+                n = [n_map[i] if i in n_map.keys() else 0 for i in n]
+                if tile=="/":
+                    if (n[0]+n[1]) >= (n[2]+n[3]):
+                        pygame.draw.polygon(screen, blocks["/"], (((x+1)*block_size,(y)*block_size), ((x)*block_size,(y+1)*block_size), ((x+1)*block_size,(y+1)*block_size)))
+                    else:
+                        pygame.draw.polygon(screen, blocks["/"], (((x+1)*block_size,(y)*block_size), ((x)*block_size,(y+1)*block_size), ((x)*block_size,(y)*block_size)))
+                elif tile=="\\":
+                    if (n[2]+n[1]) >= (n[0]+n[3]):
+                        pygame.draw.polygon(screen, blocks["/"], (((x)*block_size,(y)*block_size), ((x)*block_size,(y+1)*block_size), ((x+1)*block_size,(y+1)*block_size)))
+                    else:
+                        pygame.draw.polygon(screen, blocks["/"], (((x+1)*block_size,(y)*block_size), ((x)*block_size,(y)*block_size), ((x+1)*block_size,(y+1)*block_size)))
+            else:
+                pygame.draw.rect(screen, blocks[tile], pygame.rect.Rect(x*block_size,y*block_size,block_size,block_size))
+    screen.blit(window, (player.x, player.y))
     return lvl
 
 stages = ["intro"]
@@ -182,60 +215,60 @@ while playing:
 
     player.move(loaded_stage)
 
-    offsetx = (player.x%block_size)-block_size/2
-    offsety = (player.y%block_size)-block_size/2
-    x_ = player.x//block_size
-    y_ = player.y//block_size
-    grid = []
-    for y1 in range(display_size+1):
-        y = y_+y1-display_size//2
-        row = []
-        for x1 in range(display_size+1):
-            x = x_+x1-display_size//2
-            try:
-                i = loaded_stage[y][x]
-            except:
-                i = "#"
-            if i in ["/","\\"]:
-                n = [loaded_stage[y][x+1],loaded_stage[y+1][x],loaded_stage[y][x-1],loaded_stage[y-1][x]]
-                n_map = {
-                    "|": 3,
-                    "/": 2,
-                    "\\": 2,
-                    "#": 1
-                }
-                if i=="/":
-                    if (n_map[n[0]]+n_map[n[1]]) >= (n_map[n[2]]+n_map[n[3]]):
-                        i = "/}"
-                    else:
-                        i = "{/"
-                elif i=="\\":
-                    if (n_map[n[2]]+n_map[n[1]]) >= (n_map[n[0]]+n_map[n[3]]):
-                        i = "{\\"
-                    else:
-                        i = "\\}"
-            # if i==".\\":
-            #     pygame.draw
-            row.append(i)
-        grid.append(row)
+    # offsetx = (player.x%block_size)-block_size/2
+    # offsety = (player.y%block_size)-block_size/2
+    # x_ = player.x//block_size
+    # y_ = player.y//block_size
+    # grid = []
+    # for y1 in range(display_size+1):
+    #     y = y_+y1-display_size//2
+    #     row = []
+    #     for x1 in range(display_size+1):
+    #         x = x_+x1-display_size//2
+    #         try:
+    #             i = loaded_stage[y][x]
+    #         except:
+    #             i = "#"
+    #         if i in ["/","\\"]:
+    #             n = [loaded_stage[y][x+1],loaded_stage[y+1][x],loaded_stage[y][x-1],loaded_stage[y-1][x]]
+    #             n_map = {
+    #                 "|": 3,
+    #                 "/": 2,
+    #                 "\\": 2,
+    #                 "#": 1
+    #             }
+    #             if i=="/":
+    #                 if (n_map[n[0]]+n_map[n[1]]) >= (n_map[n[2]]+n_map[n[3]]):
+    #                     i = "/}"
+    #                 else:
+    #                     i = "{/"
+    #             elif i=="\\":
+    #                 if (n_map[n[2]]+n_map[n[1]]) >= (n_map[n[0]]+n_map[n[3]]):
+    #                     i = "{\\"
+    #                 else:
+    #                     i = "\\}"
+    #         # if i==".\\":
+    #         #     pygame.draw
+    #         row.append(i)
+    #     grid.append(row)
 
-    print("coloring screen")
-    screen.fill(blocks[" "])
-    for y in range(display_size+1):
-        for x in range(display_size+1):
-            i = grid[y][x]
-            if i=="./":
-                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y-.5)]])
-            elif i=="/.":
-                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x+.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
-            elif i==".\\":
-                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
-            elif i=="\\.":
-                pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x+.5,y-.5), (x+.5,y+.5)]])
-            else:
-                pygame.draw.rect(screen, blocks["/"], pygame.rect.Rect((x-.5-offsetx)*block_size, (y-.5-offsety)*block_size, block_size, block_size))
+    # print("coloring screen")
+    # screen.fill(blocks[" "])
+    # for y in range(display_size+1):
+    #     for x in range(display_size+1):
+    #         i = grid[y][x]
+    #         if i=="./":
+    #             pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y-.5)]])
+    #         elif i=="/.":
+    #             pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x+.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
+    #         elif i==".\\":
+    #             pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x-.5,y+.5), (x+.5,y+.5)]])
+    #         elif i=="\\.":
+    #             pygame.draw.polygon(screen, blocks["/"], [((x1-offsetx)*block_size, (y1-offsety)*block_size) for x1, y1 in [(x-.5,y-.5), (x+.5,y-.5), (x+.5,y+.5)]])
+    #         else:
+    #             pygame.draw.rect(screen, blocks["/"], pygame.rect.Rect((x-.5-offsetx)*block_size, (y-.5-offsety)*block_size, block_size, block_size))
     
-    screen.blit(player.image, (0,0))
+    window.blit(player.image, (0,0))
     pygame.display.flip()
 
     clock.tick(tick)
