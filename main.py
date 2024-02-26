@@ -1,15 +1,21 @@
 import pygame
 from pygamevideo import Video
 
+enable_display_window = True
+
 display_size = 6
 block_size = 50
 tick = 1
 
 pygame.init()
 clock = pygame.time.Clock()
-window = pygame.display.set_mode((display_size*block_size, display_size*block_size))
-screen = pygame.Surface((display_size*block_size, display_size*block_size), pygame.SRCALPHA)
-pygame.display.toggle_fullscreen()
+if enable_display_window:
+    window = pygame.display.set_mode((display_size*block_size, display_size*block_size))
+    window_rect = pygame.Rect(0,0,display_size*block_size, display_size*block_size)
+    screen = pygame.Surface((display_size*block_size, display_size*block_size), pygame.SRCALPHA)
+else:
+    screen = pygame.display.set_mode((display_size*block_size, display_size*block_size))
+# pygame.display.toggle_fullscreen()
 
 blocks = {
     "#": (0,0,0,255),
@@ -38,8 +44,8 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, relative_size=0.75):
         super().__init__()
         self.size = relative_size*block_size
-        self.image = pygame.Surface((self.size*2, self.size*2), pygame.SRCALPHA)
-        pygame.draw.rect(self.image, (160, 210, 80, 250), pygame.rect.Rect(0,0,self.size*2,self.size*2))
+        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        pygame.draw.rect(self.image, (160, 210, 80, 250), pygame.rect.Rect(0,0,self.size,self.size))
         self.rect = self.image.get_rect(center = (0,0))
         self.deltax = 0
         self.deltay = 0
@@ -51,16 +57,17 @@ class Player(pygame.sprite.Sprite):
     #     pygame.draw.rect(self.image, (160, 210, 80, 250), pygame.rect.Rect(0,0,self.size*2,self.size*2))
     #     self.rect = self.image.get_rect(center = (0,0))
 
-    def move(self, map_, xspeed=2, jumpspeed=3, acceleration=-1.8, maxspeed=5):
-        keys = pygame.key.get_pressed()
+    def move(self, map_, moves, xspeed=2, jumpspeed=3, acceleration=-1.8, maxspeed=5):  # moves = [left, right, up]
+        # keys = pygame.key.get_pressed()
+        # print("")
         multiplier = block_size/tick
         self.deltax = 0
         jump = False
-        if keys[pygame.K_RIGHT]:
+        if moves[1]:
             self.deltax += xspeed*multiplier
-        if keys[pygame.K_LEFT]:
+        if moves[0]:
             self.deltax -= xspeed*multiplier
-        if keys[pygame.K_UP]:
+        if moves[2]:
             jump = True
         self.y-=1
         if "#" in self.get_collided(map_):
@@ -107,25 +114,33 @@ class Player(pygame.sprite.Sprite):
                 deltay += 1
             elif deltay>0:
                 deltay -= 1
-        screen.blit(window,(self.x,self.y))
+        self.update()
+        # if enable_display_window:
+        #     window_rect.center = (self.x,self.y)
+        #     window.blit(screen,(0,0),window_rect)
 
     def get_collided(self, map_):
+        self.rect.center = (self.x, self.y)
         collided = []
-        y = [(self.y-self.size-1)//block_size, self.y//block_size, (self.y+self.size)//block_size]
-        x = [(self.x-self.size-1)//block_size, self.x//block_size, (self.x+self.size)//block_size]
+        y = [(self.rect.top)//block_size, self.y//block_size, (self.rect.bottom-1)//block_size]
+        x = [(self.rect.left)//block_size, self.x//block_size, (self.rect.right-1)//block_size]
         if x[2]==x[1]:
             x.pop(2)
+            # print("left")
             # collide = "left"
         if x[0]==x[1]:
             x.pop(0)
+            # print("right")
         #     collide = "right"
         # if len(x)==1:
         #     collide = ""
         if y[2]==y[1]:
             y.pop(2)
+            # print("up")
             # collide2 = "up"
         if y[0]==y[1]:
             y.pop(0)
+            # print("down")
         #     collide2 = "down"
         # if len(y)==1:
         #     collide2 = ""
@@ -141,7 +156,20 @@ class Player(pygame.sprite.Sprite):
         return collided
 
     def update(self):
-        screen.blit(self.image, self.rect.topleft)
+        self.rect.center = (self.x, self.y)
+        if enable_display_window:
+            window.fill((0,0,0,255))
+            window_rect.center = (player.x, player.y)
+            if window_rect.left<0:
+                window_rect.left = 0
+            elif window_rect.right>screen.get_width():
+                window_rect.right = screen.get_width()
+            if window_rect.top<0:
+                window_rect.top = 0
+            elif window_rect.bottom>screen.get_height():
+                window_rect.bottom = screen.get_height()
+            window.blit(screen.subsurface(window_rect).copy(), (0, 0))
+            window.blit(self.image, (window_rect.width/2, window_rect.height/2))
 
 def clamp(value, min, max):
     if value<min:
@@ -174,8 +202,12 @@ def load_level(stage, sleep=False):
             player.y = n*block_size
             player.x = row.find("$")*block_size
             break
-
-    screen = pygame.Surface((len(lvl[0])*block_size, len(lvl)*block_size))
+    
+    if enable_display_window:
+        screen = pygame.Surface((len(lvl[0])*block_size, len(lvl)*block_size))
+    else:
+        screen = pygame.display.set_mode((len(lvl[0])*block_size, len(lvl)*block_size))
+    screen.fill(blocks[" "])
     for y, row in enumerate(lvl):
         for x, tile in enumerate(row):
             if tile in ["/","\\"]:
@@ -199,7 +231,9 @@ def load_level(stage, sleep=False):
                         pygame.draw.polygon(screen, blocks["/"], (((x+1)*block_size,(y)*block_size), ((x)*block_size,(y)*block_size), ((x+1)*block_size,(y+1)*block_size)))
             else:
                 pygame.draw.rect(screen, blocks[tile], pygame.rect.Rect(x*block_size,y*block_size,block_size,block_size))
-    screen.blit(window, (player.x, player.y))
+    if enable_display_window:
+        window_rect.center = (player.x+block_size, player.y-block_size)
+        window.blit(screen, (0,0), window_rect)
     return lvl
 
 stages = ["intro"]
@@ -208,12 +242,34 @@ player = Player()
 # while True:
 loaded_stage = load_level(stages[0])
 playing = True
+moves = [False, False, False]
 while playing:
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_ESCAPE]:
-        pygame.quit()
+    # keys = pygame.key.get_pressed()
+    # if keys[pygame.K_ESCAPE]:
+        # pygame.quit()
+    for event in pygame.event.get():
+        if event.type==pygame.QUIT:
+            # pygame.quit()
+            playing = False
+        if event.type==pygame.KEYDOWN:
+            if event.key==pygame.K_ESCAPE:
+                # pygame.quit()
+                playing = False
+            elif event.key==pygame.K_LEFT:
+                moves[0] = True
+            elif event.key==pygame.K_RIGHT:
+                moves[1] = True
+            elif event.key==pygame.K_UP:
+                moves[2] = True
+        if event.type==pygame.KEYUP:
+            if event.key==pygame.K_LEFT:
+                moves[0] = False
+            elif event.key==pygame.K_RIGHT:
+                moves[1] = False
+            elif event.key==pygame.K_UP:
+                moves[2] = False
 
-    player.move(loaded_stage)
+    player.move(loaded_stage, moves)
 
     # offsetx = (player.x%block_size)-block_size/2
     # offsety = (player.y%block_size)-block_size/2
@@ -268,7 +324,7 @@ while playing:
     #         else:
     #             pygame.draw.rect(screen, blocks["/"], pygame.rect.Rect((x-.5-offsetx)*block_size, (y-.5-offsety)*block_size, block_size, block_size))
     
-    window.blit(player.image, (0,0))
+    # window.blit(player.image, (0,0))
     pygame.display.flip()
 
     clock.tick(tick)
