@@ -1,5 +1,5 @@
 import pygame
-from pygamevideo import Video
+# from pygamevideo import Video
 
 enable_display_window = True
 
@@ -179,14 +179,14 @@ def clamp(value, min, max):
     else:
         return value
 
-def playcutscene(title: str, extension="mp4"):
-    cutscene = Video("cutscenes/"+title+"."+extension)
-    cutscene.play()
+# def playcutscene(title: str, extension="mp4"):
+#     cutscene = Video("cutscenes/"+title+"."+extension)
+#     cutscene.play()
 
-    while cutscene.remaining_time>0:
-        clock.tick(0)
-        cutscene.draw_to(screen, (0,0))
-        pygame.display.flip()
+#     while cutscene.remaining_time>0:
+#         clock.tick(0)
+#         cutscene.draw_to(screen, (0,0))
+#         pygame.display.flip()
 
 def load_level(stage, sleep=False):
     with open("levels/"+stage+".txt", "r") as f:
