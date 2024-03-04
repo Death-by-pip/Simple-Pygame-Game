@@ -157,17 +157,28 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.center = (self.x, self.y)
+        # print(self.x, self.y)
         if enable_display_window:
             window.fill((0,0,0,255))
-            window_rect.center = (player.x, player.y)
-            if window_rect.left<0:
-                window_rect.left = 0
-            elif window_rect.right>screen.get_width():
-                window_rect.right = screen.get_width()
-            if window_rect.top<0:
-                window_rect.top = 0
-            elif window_rect.bottom>screen.get_height():
-                window_rect.bottom = screen.get_height()
+            # print(self.x, self.y)
+            window_rect.center = (self.x, screen.get_width()-self.y)
+            # print(window_rect.center)
+            # # print(window_rect.centerx)
+            # print(window_rect.width/2)
+            print(screen.get_width())
+            if self.x < window_rect.width/2:
+                print("left")
+                window_rect.centerx = window_rect.width/2
+            elif (self.x+window_rect.width/2)>screen.get_width():
+                print("right")
+                window_rect.centerx = screen.get_width()-window_rect.width/2
+            if screen.get_width()-self.y < window_rect.height/2:
+                print("up")
+                window_rect.centery = window_rect.height/2
+            elif (screen.get_width()-self.y+window_rect.height/2)>screen.get_height():
+                print("down")
+                window_rect.centery = screen.get_height()-window_rect.height/2
+            print(window_rect.center)
             window.blit(screen.subsurface(window_rect).copy(), (0, 0))
             window.blit(self.image, (window_rect.width/2, window_rect.height/2))
 
@@ -203,6 +214,7 @@ def load_level(stage, sleep=False):
             player.x = row.find("$")*block_size
             break
     
+    global screen
     if enable_display_window:
         screen = pygame.Surface((len(lvl[0])*block_size, len(lvl)*block_size))
     else:
